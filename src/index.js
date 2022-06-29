@@ -1,128 +1,143 @@
-//Import library to show notifications
+// Axios Library
+const axios = require('axios');
+
+// Notifix Library
 import Notiflix from 'notiflix';
+
+//Simple Lightbox library
+import SimpleLightbox from 'simplelightbox';
+import 'simplelightbox/dist/simple-lightbox.min.css';
+
+//Import function which send a request to server
+import { fetchPhotos } from './js/fetchPhotos';
 
 //Import styles
 import './sass/index.scss';
 
-// Import of simpleLightbox library
-import SimpleLightbox from 'simplelightbox';
-import 'simplelightbox/dist/simple-lightbox.min.css'
+//QS & let
+const searchForm = document.querySelector('#search-form');
+const searchInput = document.querySelector('input');
+const gallery = document.querySelector(".gallery");
+const loadMoreBtn = document.querySelector(".load-more");
 
-//Import modules
-import './js/fetchPhotos.js';
-import { fetchPhotos } from './js/fetchPhotos';
-
-
-//QS
-const searchForm = document.querySelector(".search-form");
-const searchInput = document.querySelector(".search-form__input");
-const gallery = document.querySelector('.gallery');
-const loadMoreBtn = document.querySelector('.load-more');
-
-
-let pageNumber;
-let totalHits;
 let lightbox;
+let pageNumber;
 let leftHits;
 
-//Event listeners
-searchForm.addEventListener("submit", newSearch);
 
-loadMoreBtn.addEventListener("click", loadMoreImg);
-
-// Function to search photo
-function searchImages() {
-    fetchPhotos(searchInput.value, pageNumber)
-      .then(photos => {
-        renderPhotos(photos);
-      })
-      .catch(error => console.log(error));
-  }
-
-function newSearch (e){
-    e.preventDefault();
-    loadMoreBtn.style.display = "none"
-    pageNumber = 1;
-    searchImages();
-    gallery.innerHTML = ""; 
+function searchPhotos() {
+  fetchPhotos(searchInput.value, pageNumber)
+    .then(data => {
+      renderPhotos(data);
+    })
+    .catch(error => {
+      console.log(error);
+    });
 }
 
 
-
-function renderPhotos(hits, totalHits) {
-    leftHits = totalHits - pageNumber * 40;
-
-    if (totalHits == 0) {
-        Notiflix.Notify.failure("Sorry, there are no images matching your search query. Please try again.");
-      } else if (!totalHits == 0 && leftHits <0) {
-        Notiflix.Notify.info("We're sorry, but you've reached the end of search results.");
-      } else if (totalHits > 0 && pageNumber == 1) {
-        Notiflix.Notify.success(`Hooray! We found ${totalHits} images.`);
+function renderPhotos({ totalHits, hits }) {
+  
+  const markup = hits
+    .map(
+      ({
+        largeImageURL,
+        webformatURL,
+        tags,
+        likes,
+        views,
+        comments,
+        downloads,
+      }) => {
+        return `<div class="gallery__item">
+                  <a class="gallery__link" href="${largeImageURL}">
+                    <img class="gallery__img"  src="${webformatURL}" alt="${tags}" loading="lazy" />
+                  </a>
+                  <div class="gallery__info">
+                    <p class="info__item">
+                      <b>Likes</b>${likes}
+                    </p>
+                    <p class="info__item">
+                      <b>Views</b>${views}
+                    </p>
+                    <p class="info__item">
+                      <b>Comments</b>${comments}
+                    </p>
+                    <p class="info__item">
+                      <b>Downloads</b>${downloads}
+                    </p>
+                  </div>
+                </div>`;
       }
+    )
+    .join('');
 
-    const markup = hits
-      .map(
-        ({
-          webformatURL,
-          largeImageURL,
-          tags,
-          likes,
-          views,
-          comments,
-          downloads,
-        }) =>
-          `
-          <div class="gallery__item">
-          <a class="gallery__link" href="${largeImageURL}"><img class="gallery__img" src="${webformatURL}" alt="${tags}" loading="lazy" /></a>
-          <div class="gallery__info">
-            <p class="info__item">
-              <b class="info__label">Likes</b>
-              <span class="info__data">${likes}</span>
-            </p>
-            <p class="info__item">
-              <b class="info__label">Views</b>
-              <span class="info__data">${views}</span>
-            </p>
-            <p class="info__item">
-              <b class="info__label">Comments</b>
-              <span class="info__data">${comments}</span>
-            </p>
-            <p class="info__item">
-              <b class="info__label">Downloads</b>
-              <span class="info__data">${downloads}</span>
-            </p>
-          </div>
-        </div>
-        `)
-        .join("");
-        
-        gallery.insertAdjacentHTML("beforeend", markup);
-      
-        if (typeof lightbox === "object") {
-          lightbox.destroy();
-          }
-
-        lightbox = new SimpleLightbox(".gallery__item a");
-
-        if (pageNumber > 1) {
-            const { height: cardHeight } = document
-            .querySelector('.gallery .gallery__item').getBoundingClientRect();
-          
-            window.scrollBy({
-              top: cardHeight * 2,
-              behavior: 'smooth',
-            });
-          }        
-  }
+  gallery.insertAdjacentHTML('beforeend', markup);
   
-function loadMoreImg (){
-    pageNumber +=1;
-    searchImages();
+  leftHits = totalHits - pageNumber * 40;
+
+  if (totalHits == 0) {
+    Notiflix.Notify.failure(
+      `Sorry, there are no images matching your search query. Please try again.`
+    );
+  }
+
+  if (!totalHits == 0 && leftHits < 0) {
+    Notiflix.Notify.failure(
+      `We're sorry, but you've reached the end of search results.`
+  );
+  }
+
+  if (pageNumber == 1 && totalHits > 0) {
+    Notiflix.Notify.success(
+      `Hooray! We found ${totalHits} images`
+      );
+  }
+
+  
+  if (typeof lightbox === 'object') {
+    lightbox.destroy();
+  }
+
+  lightbox = new SimpleLightbox('.gallery a', {
+    captionDelay: '250',
+  });
+
+  if (pageNumber > 1) {
+    const { height: cardHeight } = document
+      .querySelector('.gallery')
+      .firstElementChild.getBoundingClientRect();
+
+    window.scrollBy({
+      top: cardHeight * 2,
+      behavior: 'smooth',
+    });
+  }
 }
 
+const newSearch = e => {
+  e.preventDefault();
+  pageNumber = 1;
+  gallery.innerHTML = '';
+  console.log(`start: ${pageNumber}`);
+  searchPhotos();
+}
+
+searchForm.addEventListener('submit', newSearch);
 
 
-// Function to check end of rendering photos
+function loadMore() {
+  pageNumber += 1;
+  searchPhotos();
+}
 
+function infiniteScrolling (){
   
+  if (window.scrollY + window.innerHeight >= 
+    document.documentElement.scrollHeight) {
+    loadMore();
+  }
+}
+
+window.addEventListener("scroll", infiniteScrolling);
 

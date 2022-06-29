@@ -1,8 +1,5 @@
-// Import Axios library
-import axios from "axios";
 const axios = require('axios');
 
-// Function which send a request to the pixabay
 export async function fetchPhotos(searchedValue, page) {
   const params = new URLSearchParams({
     key: "28306933-4038f820c251ef9eb8ffc5349",
